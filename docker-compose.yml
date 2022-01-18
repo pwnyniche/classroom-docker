@@ -1,0 +1,74 @@
+version: '3.8'
+
+networks:
+  default: {}
+
+services:
+  #app
+  app:
+    container_name: classroom
+    build:
+      context: ./app
+      args:
+        UID: 1733
+    image: classroom:dev
+    restart: always
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./app/classroom:/home/classroom/src
+      # mount với source code đã có 
+    ports:
+      - 3000:3000
+    depends_on:
+      - api
+      # phụ thuộc vào service api, nghĩa là db sẽ build trước
+    entrypoint:
+    - bash
+      #quy định entrypoint để container không shutdown
+    tty: true
+    stdin_open: true
+  #api   
+  api:
+    container_name: classroom-api
+    build:
+      context: ./api
+      args:
+        UID: 1733
+    image: classroom-api:dev
+    restart: always
+    environment:
+      - TZ=${TZ}
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ./api/classroom-api:/home/classroom-api/src
+      # mount với source code đã có 
+    ports:
+      - 7000:7000
+    depends_on:
+      - db
+      # phụ thuộc vào service db, nghĩa là db sẽ build trước
+    entrypoint:
+    - bash
+      #quy định entrypoint để container không shutdown
+    tty: true
+    stdin_open: true
+  # The Database
+  db:
+    build:
+      context: ./db
+    container_name: classroom
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    volumes:
+      - ./db/link_db:/var/lib/mysql
+      # Ta mount volumes với mục đích để backup
+    ports:
+      - 3306:3306
